@@ -29,75 +29,51 @@ bool readPgmImageFromFile(filesystem::path pathToBeRead, PgmImage& imageToBeWrit
     {
         string inputString;
         char refChar='#';
-        int counter =0;
         bool isValidPgmFile = true;
-        while(isValidPgmFile)
+
+        string magicNumberString;
+        my_file >> magicNumberString;
+        string widthString;
+        my_file >> widthString;
+        string heightString;
+        my_file >> heightString;
+        string maxValueString;
+        my_file >> maxValueString;
+
+        try
         {
-            my_file >> inputString;
-            if (string::npos != inputString.find(refChar))
+            imageToBeWritten.m_magicNumber=magicNumberString; 
+            imageToBeWritten.m_width=stoi(widthString); 
+            imageToBeWritten.m_height=stoi(heightString); 
+            imageToBeWritten.m_maxValue=stoi(maxValueString);
+            if("P2"!=imageToBeWritten.m_magicNumber)
             {
-                break;
+                cout << "The file '"<<pathToBeRead.filename().string()<< "' seems to be no regular pgm file (Magic number not equal to 'P2'). File is ignored."<<endl;
+                isValidPgmFile=false;
             }
-            else if (my_file.eof())
+        }
+        catch(const std::exception& e)
+        {
+            cout << "The file '"<< pathToBeRead.filename().string()<<"' seems to be no regular pgm file (Check width,height,max Value specification). File is ignored."<<endl;
+            isValidPgmFile=false;
+        }
+        if(isValidPgmFile)
+        {
+            for(int i=0; i<(imageToBeWritten.m_width*imageToBeWritten.m_height); i++)
             {
-                break;
-            }
-            if (0==counter)
-            {
-                imageToBeWritten.m_magicNumber=inputString;
-                if("P2"!=imageToBeWritten.m_magicNumber)
+                if (my_file.eof())
                 {
-                    cout << pathToBeRead.filename().string();
-                    cout << " seems to be no regular pgm file. File is ignored."<<endl;
+                    cout << "The file '"<< pathToBeRead.filename().string()<<"' seems to be no regular pgm file (Not enough pixel values provided). File is ignored."<<endl;
                     isValidPgmFile=false;
                     break;
                 }
-                
-            }
-            else if (1==counter)
-            {
-                try
+                my_file >> inputString;
+                if (string::npos != inputString.find(refChar))
                 {
-                    imageToBeWritten.m_width=stoi(inputString);  
-                }
-                catch(const std::invalid_argument& e)
-                {
-                    cout << pathToBeRead.filename().string();
-                    cout << " seems to be no regular pgm file. File is ignored."<<endl;
+                    cout << "The file '"<< pathToBeRead.filename().string()<<"' seems to be no regular pgm file (Not enough pixel values provided). File is ignored."<<endl;
                     isValidPgmFile=false;
                     break;
                 }
-            }
-            else if (2 == counter)
-            {
-                try
-                {
-                    imageToBeWritten.m_height=stoi(inputString);  
-                }
-                catch(const std::invalid_argument& e)
-                {
-                    cout << pathToBeRead.filename().string();
-                    cout << " seems to be no regular pgm file. File is ignored."<<endl;
-                    isValidPgmFile=false;
-                    break;
-                }
-            }
-            else if (3 == counter)
-            {
-                try
-                {
-                    imageToBeWritten.m_maxValue=stoi(inputString);  
-                }
-                catch(const std::invalid_argument& e)
-                {
-                    cout << pathToBeRead.filename().string();
-                    cout << " seems to be no regular pgm file. File is ignored."<<endl;
-                    isValidPgmFile=false;
-                    break;
-                }
-            }
-            else if(3 < counter)
-            {
                 try
                 {
                     const int pixelValue =stoi(inputString);
@@ -105,26 +81,18 @@ bool readPgmImageFromFile(filesystem::path pathToBeRead, PgmImage& imageToBeWrit
                 }
                 catch(const std::invalid_argument& e)
                 {
-                    cout << pathToBeRead.filename().string();
-                    cout << " seems to be no regular pgm file. File is ignored."<<endl;
+                    cout << "At least one pixel value within file '"<< pathToBeRead.filename().string()<< "' is no integer. File seems to be no regular pgm file. File is ignored."<<endl;
                     isValidPgmFile=false;
                     break;
                 }
-                if ((imageToBeWritten.m_width*imageToBeWritten.m_height)==imageToBeWritten.m_pixels.size())
-                {
-                    break;
-                }
             }
-            
-            counter += 1;
         }
         if (isValidPgmFile)
         {
             successfull=true;
         }
     }
-    my_file.close();
-       
+    my_file.close();    
     return successfull;
 }
 bool createAverageImage(const vector<PgmImage> inputImages, PgmImage& averageImage)
@@ -148,7 +116,7 @@ bool createAverageImage(const vector<PgmImage> inputImages, PgmImage& averageIma
         }
         if(averageImage.m_pixels.size()!= (averageImage.m_width*averageImage.m_height))
         {
-            cout << "Something went wrong!"<<endl;
+            cout << "Something went wrong! Number of Pixels of created image does not match with width and height specification."<<endl;
         }
         else
         {
@@ -180,13 +148,8 @@ bool writePgmImageToFile(PgmImage imageToWrite,string nameOfFile)
     }
     fstream my_newFile;
     my_newFile.open(nameOfFile,ios::out);
-    if (!my_newFile)
+    if (my_newFile)
     {
-        cout <<"File not created! \n"<<endl;
-    }
-    else
-    {
-        cout <<"File successfully created! \n"<<endl;
         my_newFile << writeToFile;
         successfull=true;
     }
@@ -223,6 +186,14 @@ int main()
         cout << "Creating 'average.pgm' file..."<<endl;
         const string fileToBeWritten="Images/average.pgm";
         const bool writeSuccessfull =writePgmImageToFile(imageNew,fileToBeWritten);
+        if (writeSuccessfull)
+        {
+            cout <<"File successfully created! \n"<<endl;
+        }
+        else
+        {
+            cout <<"File not created! \n"<<endl;
+        }
     }
 
     return 0;
